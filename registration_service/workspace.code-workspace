@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../common"
+		},
+		{
+			"path": "../../../../capnproto_schemas"
+		}
+	],
+	"settings": {}
+}
