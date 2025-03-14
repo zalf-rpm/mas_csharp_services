@@ -1,42 +1,22 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using Capnp;
 using Capnp.Rpc;
-using Capnp.Rpc.Interception;
 using Mas.Infrastructure.Common;
 using Mas.Schema.Storage;
 using R = Mas.Schema.Registry;
-using P = Mas.Schema.Persistence;
 using C = Mas.Schema.Common;
 using Exception = System.Exception;
 
 namespace Mas.Infrastructure.ServiceRegistry;
 
-public class ServiceRegistry : R.IRegistry
+public class ServiceRegistry(C.IdInformation idInformation, Restorer restorer) : R.IRegistry
 {
-    internal readonly ConcurrentDictionary<string, C.IdInformation> CatId2SupportedCategories;
+    internal C.IdInformation IdInformation { get; set; } = idInformation;
+    internal Restorer Restorer { get; } = restorer;
+    internal ConcurrentDictionary<string, C.IdInformation> CatId2SupportedCategories { get; } = new();
+    internal ConcurrentDictionary<string, RegData> RegId2Entry { get; } = new();
 
-    internal readonly ConcurrentDictionary<string, RegData> RegId2Entry;
+    internal Store.IContainer CategoriesStorage { get; set; }
 
-    //private ConcurrentDictionary<string, (ulong[], string)> _extSRT2VatIdAndIntSRT = new(); // mapping of external sturdy ref token to internal one
-    internal readonly IInterceptionPolicy SavePolicy;
-
-    private Store.IContainer _categoriesStorage;
-    //private ConcurrentDictionary<ulong[], Mas.Schema.Persistence.IRestorer> _vatId2Restorer = new();   
-
-    public ServiceRegistry()
-    {
-        CatId2SupportedCategories = new ConcurrentDictionary<string, C.IdInformation>();
-        RegId2Entry = new ConcurrentDictionary<string, RegData>();
-        SavePolicy = new InterceptPersistentPolicy(this);
-    }
-
-    public Restorer Restorer { get; set; }
-
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
 
     public C.IdInformation[] Categories
     {
@@ -70,64 +50,19 @@ public class ServiceRegistry : R.IRegistry
 
     public Task<C.IdInformation> Info(CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new C.IdInformation
-            { Id = Id, Name = Name, Description = Description });
+        return Task.FromResult(IdInformation);
     }
 
     #endregion
 
-    public void SetCategoriesStorage(Store.IContainer storage)
-    {
-        _categoriesStorage = storage;
-        //var objs = await storage.ListObjects();
-        //Categories = objs.Select(o => (C.IdInformation)o.Value.AnyValue).ToArray();
-    }
-
-
-    private class InterceptPersistentPolicy(ServiceRegistry registry) : IInterceptionPolicy
-    {
-        //private ulong RestorerInterfaceId;
-        //private ulong RestoreMethodId = 0;
-        private readonly ulong _persistentInterfaceId =
-            typeof(P.IPersistent).GetCustomAttribute<TypeIdAttribute>(false)?.Id ?? 0;
-
-        private readonly ulong _saveMethodId = 0;
-
-        //RestorerInterfaceId = typeof(P.IRestorer).GetCustomAttribute<Capnp.TypeIdAttribute>(false)?.Id ?? 0;
-
-        public bool Equals([AllowNull] IInterceptionPolicy other)
-        {
-            return Equals(other);
-        }
-
-        public void OnCallFromAlice(CallContext callContext)
-        {
-            callContext.ForwardToBob();
-        }
-
-        public void OnReturnFromBob(CallContext callContext)
-        {
-            if (callContext.InterfaceId == _persistentInterfaceId && callContext.MethodId == _saveMethodId)
-            {
-                var result = CapnpSerializable.Create<P.Persistent.SaveResults>(callContext.OutArgs);
-                var intSrt = result.SturdyRef.LocalRef.Text;
-                var extSrt = Guid.NewGuid().ToString();
-                registry.Restorer.InstallCrossDomainMapping(extSrt, result.SturdyRef.Vat.Id, intSrt);
-                result.SturdyRef = registry.Restorer.SturdyRef(extSrt);
-                var resultWriter = SerializerState.CreateForRpc<P.Persistent.SaveResults.WRITER>();
-                result.serialize(resultWriter);
-                callContext.OutArgs = resultWriter;
-            }
-
-            callContext.ReturnToAlice();
-        }
-    }
 
     #region implementation of IInterceptionPolicy
 
     public Task<C.IdInformation> CategoryInfo(string categoryId, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(CatId2SupportedCategories.GetValueOrDefault(categoryId));
+        return CatId2SupportedCategories.TryGetValue(categoryId, out var category)
+            ? Task.FromResult(category)
+            : Task.FromResult<C.IdInformation>(null);
     }
 
     public Task<IReadOnlyList<R.Registry.Entry>> Entries(string categoryId,

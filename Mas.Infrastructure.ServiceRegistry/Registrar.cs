@@ -7,11 +7,11 @@ using C = Mas.Schema.Common;
 
 namespace Mas.Infrastructure.ServiceRegistry;
 
-public class Registrar(ServiceRegistry reg, Restorer restorer) : R.IRegistrar
+public class Registrar(ServiceRegistry registry, Restorer restorer) : R.IRegistrar
 {
     public void Dispose()
     {
-        Console.WriteLine("RegistratorImpl.Dispose");
+        Console.WriteLine("Registrar.Dispose");
     }
 
     #region implementation of Mas.C.IIdentifiable
@@ -20,8 +20,8 @@ public class Registrar(ServiceRegistry reg, Restorer restorer) : R.IRegistrar
     {
         return Task.FromResult(new C.IdInformation
         {
-            Id = "Registrar_" + reg.Id, Name = "Registrar of " + reg.Name,
-            Description = "Registrar description of " + reg.Description
+            Id = "Registrar_" + registry.IdInformation.Id, Name = "Registrar of " + registry.IdInformation.Name,
+            Description = "Registrar description of " + registry.IdInformation.Description
         });
     }
 
@@ -37,7 +37,7 @@ public class Registrar(ServiceRegistry reg, Restorer restorer) : R.IRegistrar
             return Task.FromResult<(R.Registrar.IUnregisterCapability, P.SturdyRef)>((null, null));
 
         // Return if category doesnt exist exist
-        if (!reg.CatId2SupportedCategories.ContainsKey(ps.CategoryId))
+        if (!registry.CatId2SupportedCategories.ContainsKey(ps.CategoryId))
             return Task.FromResult<(R.Registrar.IUnregisterCapability, P.SturdyRef)>((null, null));
 
         try
@@ -46,22 +46,16 @@ public class Registrar(ServiceRegistry reg, Restorer restorer) : R.IRegistrar
             var regId = Guid.NewGuid().ToString();
 
             // attach a membrane around the capability to intercept save messages
-            var interceptedCap = reg.SavePolicy.Attach(ps.Cap);
+            var savePolicy = new InterceptPersistentPolicy(registry);
+
+            var interceptedCap = savePolicy.Attach(ps.Cap);
 
             // if this capabiity is supposed to be restorable accross domains, register it at the restorer
             if (ps.XDomain != null && ps.XDomain.Restorer != null)
                 restorer.AddOrUpdateCrossDomainRestore(ps.XDomain.VatId, ps.XDomain.Restorer);
 
-            // create an unregister action
-            // var unreg = new Common.Action(() =>
-            // {
-            //     _registry._regId2Entry.TryRemove(regId, out var removedRegData);
-            //     removedRegData.ReregUnsave?.Do();
-            // }, restorer: _restorer, callActionOnDispose: true);
-
-
             // Create an unregister capability
-            var unregCap = new UnregisterCapability(reg, regId);
+            var unregCap = new UnregisterCapability(registry, regId);
 
             var regData = new RegData
             {
@@ -75,38 +69,7 @@ public class Registrar(ServiceRegistry reg, Restorer restorer) : R.IRegistrar
                 Cap = Proxy.Share(ps.Cap)
             };
 
-
-            // var reregCap = new ReregisterCapability(reg, );
-
-
-            // create an reregister action and sturdy ref to it
-            // var rereg = new Common.Action1((object anyp) =>
-            // {
-            //     if (anyp is C.IIdentifiable cap)
-            //     {
-            //         var interceptedCap = reg._savePolicy.Attach(cap);
-            //
-            //         reg._regId2Entry[regId] = new RegData
-            //         {
-            //             Entry = new R.Registry.Entry
-            //             {
-            //                 CategoryId = ps.CategoryId,
-            //                 Ref = interceptedCap,
-            //                 Name = ps.RegName
-            //             },
-            //             Unreg = unreg,
-            //             Cap = Proxy.Share(cap)
-            //         };
-            //     }
-            // });
-            //
-            // get the sturdy ref to the reregister action
-            // var res = restorer.Save(BareProxy.FromImpl(reregCap));
-
-            // and save the unsave action to remove the sturdy ref on unregistration of the capability
-            // regData.ReregUnsave = res.UnsaveAction;
-
-            reg.RegId2Entry[regId] = regData;
+            registry.RegId2Entry[regId] = regData;
 
             // !!! note it is fine to accept manually aquired sturdy refs to the unreg action
             // !!! to not be automatically removed on unregistration of the capability as the user might
@@ -146,7 +109,7 @@ public class Registrar(ServiceRegistry reg, Restorer restorer) : R.IRegistrar
 
     #region implementation of ReregisterCapability
 
-    private class ReregisterCapability(ServiceRegistry registry, Restorer restorer, string regId)
+    private class ReregisterCapability(ServiceRegistry registry, Restorer? restorer, string regId)
         : R.Registrar.IReregisterCapability
     {
         public void Dispose()

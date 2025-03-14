@@ -16,8 +16,8 @@ internal class Admin(ServiceRegistry registry) : R.IAdmin
     {
         return Task.FromResult(new C.IdInformation
         {
-            Id = "Admin_" + registry.Id, Name = "Admin of " + registry.Name,
-            Description = "Admin description of " + registry.Description
+            Id = "Admin_" + registry.IdInformation.Id, Name = "Admin of " + registry.IdInformation.Name,
+            Description = "Admin description of " + registry.IdInformation.Description
         });
     }
 
@@ -42,7 +42,7 @@ internal class Admin(ServiceRegistry registry) : R.IAdmin
         // }
     }
 
-    public Task<IReadOnlyList<string>> MoveObjects(IReadOnlyList<string> objectIds, string toCatId,
+    public Task<IReadOnlyList<string>> MoveObjects(IReadOnlyList<string> objectIds, string? toCatId,
         CancellationToken cancellationToken = default)
     {
         // check that the move to category actually exists, else treat it as none existing
@@ -71,8 +71,8 @@ internal class Admin(ServiceRegistry registry) : R.IAdmin
         return Task.FromResult<R.IRegistry>(registry);
     }
 
-    public Task<IReadOnlyList<C.IIdentifiable>> RemoveCategory(string categoryId,
-        string moveObjectsToCategoryId,
+    public Task<IReadOnlyList<C.IIdentifiable>> RemoveCategory(string? categoryId,
+        string? moveObjectsToCategoryId,
         CancellationToken cancellationToken = default)
     {
         var removed = new List<C.IIdentifiable>();
