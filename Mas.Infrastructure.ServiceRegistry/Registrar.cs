@@ -74,7 +74,8 @@ public class Registrar(ServiceRegistry reg, Restorer restorer) : R.IRegistrar
                 UnregisterCapability = unregCap,
                 Cap = Proxy.Share(ps.Cap)
             };
-            // Create an unregister capability and sturdy ref to it
+
+
             // var reregCap = new ReregisterCapability(reg, );
 
 

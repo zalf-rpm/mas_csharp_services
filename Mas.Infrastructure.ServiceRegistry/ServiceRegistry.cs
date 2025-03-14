@@ -28,8 +28,7 @@ public class ServiceRegistry : R.IRegistry
     public ServiceRegistry()
     {
         CatId2SupportedCategories = new ConcurrentDictionary<string, C.IdInformation>();
-        RegId2Entry =
-            new ConcurrentDictionary<string, RegData>(); //Tuple<string, Registry.Entry, Common.Unregister>>();
+        RegId2Entry = new ConcurrentDictionary<string, RegData>();
         SavePolicy = new InterceptPersistentPolicy(this);
     }
 

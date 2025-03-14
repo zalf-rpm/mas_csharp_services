@@ -16,9 +16,6 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.2"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0"/>
-        <PackageReference Include="MSTest.TestAdapter" Version="3.8.2"/>
-        <PackageReference Include="MSTest.TestFramework" Version="3.8.2"/>
         <PackageReference Include="NSec.Cryptography" Version="24.4.0"/>
     </ItemGroup>
 </Project>
