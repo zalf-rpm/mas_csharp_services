@@ -1,6 +1,6 @@
 using Mas.Schema.Common;
 
-namespace Mas.Infrastructure.ServiceRegistry;
+namespace Mas.Infrastructure.ServiceRegistry.Test;
 
 public class TestService(IdInformation idInformation) : IIdentifiable
 {
