@@ -2,13 +2,19 @@ using Mas.Infrastructure.Common;
 using Mas.Schema.Common;
 using Mas.Schema.Registry;
 
-namespace Mas.Infrastructure.ServiceRegistry;
+namespace Mas.Infrastructure.ServiceRegistry.Test;
 
 [TestClass]
 public class ServiceRegistryTests
+
 {
+    [TestInitialize]
+    public void AdminTest()
+    {
+    }
+
     [TestMethod]
-    public void RegisterService()
+    public async Task RegisterService()
     {
         var testServiceInformation = new IdInformation
         {
@@ -29,17 +35,17 @@ public class ServiceRegistryTests
 
         var connectionManager = new ConnectionManager();
 
-        var admin = connectionManager.Connect<IAdmin>(
-                "capnp://i1g7XsHI1TjS_t6Sxm6s5JKcXIcvO0oVjnLyWFm3eco@192.168.109.176:42000/281d9a2a-e9e0-4dc4-aab6-b4343c924ec5")
-            .Result;
+        var admin = await connectionManager.Connect<IAdmin>(
+            "capnp://ucIK3RykCwpfEDL9OFS2FZlRk7UCG-2G8KfBy-HR1jA@192.168.109.176:42000/30ec188b-53f9-492b-9a00-ef0fbf1b5165");
 
-        var created = admin.AddCategory(testCategory, true).Result;
+        var created = await admin.AddCategory(testCategory, true);
 
-        Console.WriteLine(created);
+        Console.WriteLine("Created Test Category: " + created);
 
-        var registrar = connectionManager.Connect<IRegistrar>(
-                "capnp://i1g7XsHI1TjS_t6Sxm6s5JKcXIcvO0oVjnLyWFm3eco@192.168.109.176:42000/d9e808b5-c5f7-4a52-8b7d-f62c6a75c37a")
-            .Result;
+        var registry = await admin.Registry();
+
+        var registrar = await connectionManager.Connect<IRegistrar>(
+            "capnp://ucIK3RykCwpfEDL9OFS2FZlRk7UCG-2G8KfBy-HR1jA@192.168.109.176:42000/55fcc390-219c-4bbe-9e33-8f4ca1097868");
 
         var regParams = new Schema.Registry.Registrar.RegParams
         {
@@ -49,30 +55,27 @@ public class ServiceRegistryTests
         };
 
 
-        var (unreg, sturdyref) = registrar.Register(regParams).Result;
+        var (unreg, sturdyref) = await registrar.Register(regParams);
 
-        var registry = connectionManager.Connect<IRegistry>(
-                "capnp://i1g7XsHI1TjS_t6Sxm6s5JKcXIcvO0oVjnLyWFm3eco@192.168.109.176:42000/695d27a7-5c5d-451e-aa77-2078dc1b5c54")
-            .Result;
-        var entries = registry.Entries("Test").Result;
+       
+        var entries = await registry.Entries("Test");
 
         Console.WriteLine("Before Unregister");
         foreach (var entry in entries)
         {
             Console.WriteLine(entry.Name);
-            var serviceFromReg = entry;
-        }
+            var info = await entry.Ref.Info();
+            Console.WriteLine(info.Description );        }
 
-        var unregisterResult = unreg.Unregister().Result;
+        var unregisterResult = await unreg.Unregister();
 
         Console.WriteLine("After Unregister");
         Console.WriteLine(unregisterResult);
 
-        entries = registry.Entries("Test").Result;
+        entries = await registry.Entries("Test");
         foreach (var entry in entries)
         {
             Console.WriteLine(entry.Name);
-            var serviceFromReg = entry;
         }
     }
 }
