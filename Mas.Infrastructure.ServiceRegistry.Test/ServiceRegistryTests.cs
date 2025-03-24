@@ -57,7 +57,7 @@ public class ServiceRegistryTests
 
         var (unreg, sturdyref) = await registrar.Register(regParams);
 
-       
+
         var entries = await registry.Entries("Test");
 
         Console.WriteLine("Before Unregister");
@@ -65,7 +65,8 @@ public class ServiceRegistryTests
         {
             Console.WriteLine(entry.Name);
             var info = await entry.Ref.Info();
-            Console.WriteLine(info.Description );        }
+            Console.WriteLine(info.Description);
+        }
 
         var unregisterResult = await unreg.Unregister();
 
@@ -73,9 +74,6 @@ public class ServiceRegistryTests
         Console.WriteLine(unregisterResult);
 
         entries = await registry.Entries("Test");
-        foreach (var entry in entries)
-        {
-            Console.WriteLine(entry.Name);
-        }
+        foreach (var entry in entries) Console.WriteLine(entry.Name);
     }
 }

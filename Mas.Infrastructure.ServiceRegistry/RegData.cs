@@ -5,7 +5,6 @@ namespace Mas.Infrastructure.ServiceRegistry;
 
 public struct RegData
 {
-
     public R.Registry.Entry Entry { get; set; }
 
     public R.Registrar.IUnregisterCapability UnregisterCapability { get; set; }

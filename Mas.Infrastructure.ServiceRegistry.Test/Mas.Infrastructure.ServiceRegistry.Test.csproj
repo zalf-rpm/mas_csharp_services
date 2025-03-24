@@ -8,7 +8,7 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <ProjectReference Include="../Mas.Infrastructure.ServiceRegistry/Mas.Infrastructure.ServiceRegistry.csproj"/>
     </ItemGroup>
