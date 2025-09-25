@@ -6,7 +6,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mas.Schema", "./mas_capnpro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mas.Infrastructure.Common", "./mas_csharp_common/Mas.Infrastructure.Common.csproj", "{8263EFF9-E816-4074-A622-D48FCEDE47E7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mas.Infrastructure.ServiceRegistry", "./Mas.Infrastructure.ServiceRegistru/Mas.Infrastructure.ServiceRegistry.csproj", "{4D2BB552-5B12-4698-865D-58B3C2FC7053}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mas.Infrastructure.ServiceRegistry", "./Mas.Infrastructure.ServiceRegistry/Mas.Infrastructure.ServiceRegistry.csproj", "{4D2BB552-5B12-4698-865D-58B3C2FC7053}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mas.Infrastructure.ServiceRegistry.Test", "./Mas.Infrastructure.ServiceRegistry.Test/Mas.Infrastructure.ServiceRegistry.Test.csproj", "{82C38AA0-B7A1-4EA4-8A34-54BFFD688D03}"
 EndProject
