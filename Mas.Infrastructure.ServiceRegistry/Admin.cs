@@ -4,7 +4,7 @@ using C = Mas.Schema.Common;
 
 namespace Mas.Infrastructure.ServiceRegistry;
 
-internal class Admin(ServiceRegistry registry) : R.IAdmin
+public class Admin(ServiceRegistry registry) : R.IAdmin
 {
     public void Dispose()
     {

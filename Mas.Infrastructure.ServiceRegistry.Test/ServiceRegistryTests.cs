@@ -1,4 +1,8 @@
+using System.Net;
+using Capnp.Rpc;
+using Mas.Infrastructure.ServiceRegistry; // for ServiceRegistry, Admin, Registrar
 using Mas.Infrastructure.Common;
+using Mas.Rpc.Test;
 using Mas.Schema.Common;
 using Mas.Schema.Registry;
 
@@ -6,11 +10,59 @@ namespace Mas.Infrastructure.ServiceRegistry.Test;
 
 [TestClass]
 public class ServiceRegistryTests
-
 {
-    [TestInitialize]
-    public void AdminTest()
+    private const int Port = 42000; // keep fixed to match existing test URIs
+
+    // In-process host state
+    private static ConnectionManager? _serverConMan;
+    private static Restorer? _restorer;
+    private static ServiceRegistry? _registry;
+    private static Registrar? _registrar;
+    private static Admin? _admin;
+    private static bool _started;
+
+    [ClassInitialize]
+    public static void ClassInit(TestContext ctx)
     {
+        if (_started) return;
+        _restorer = new Restorer { TcpHost = ConnectionManager.GetLocalIPAddress() };
+        _serverConMan = new ConnectionManager();
+        _registry = new ServiceRegistry(new IdInformation
+        {
+            Id = "TestRegistryId",
+            Name = "TestRegistry",
+            Description = "Test Registry for automated tests"
+        }, _restorer);
+
+        // Bind server on requested port exposing restorer as bootstrap (mirrors Program.cs)
+        _serverConMan.Bind(IPAddress.Any, Port, _restorer);
+        _restorer.TcpPort = _serverConMan.Port;
+
+        // Create and publish sturdy refs with fixed tokens so client side can connect identically to production startup
+        var registrySr = _restorer.SaveStr(BareProxy.FromImpl(_registry), "registry").Item1;
+        _registrar = new Registrar(_registry, _restorer);
+        var registrarSr = _restorer.SaveStr(BareProxy.FromImpl(_registrar), "registrar").Item1;
+        _admin = new Admin(_registry);
+        var registryAdminSr = _restorer.SaveStr(BareProxy.FromImpl(_admin), "registry_admin").Item1;
+
+        Console.WriteLine(
+            $"[TestHost] ServiceRegistry started. SRs:\n registry={registrySr}\n registrar={registrarSr}\n registry_admin={registryAdminSr}");
+        _started = true;
+    }
+
+    [ClassCleanup(ClassCleanupBehavior.EndOfClass)]
+    public static void ClassCleanup()
+    {
+        try
+        {
+            _serverConMan?.Dispose();
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        _started = false;
     }
 
     [TestMethod]
@@ -36,7 +88,7 @@ public class ServiceRegistryTests
         var connectionManager = new ConnectionManager();
 
         var admin = await connectionManager.Connect<IAdmin>(
-            "capnp://ucIK3RykCwpfEDL9OFS2FZlRk7UCG-2G8KfBy-HR1jA@192.168.109.176:42000/30ec188b-53f9-492b-9a00-ef0fbf1b5165");
+            $"capnp://{ConnectionManager.GetLocalIPAddress()}:42000/registry_admin");
 
         var created = await admin.AddCategory(testCategory, true);
 
@@ -44,8 +96,9 @@ public class ServiceRegistryTests
 
         var registry = await admin.Registry();
 
-        var registrar = await connectionManager.Connect<IRegistrar>(
-            "capnp://ucIK3RykCwpfEDL9OFS2FZlRk7UCG-2G8KfBy-HR1jA@192.168.109.176:42000/55fcc390-219c-4bbe-9e33-8f4ca1097868");
+        var registrar =
+            await connectionManager.Connect<IRegistrar>(
+                $"capnp://{ConnectionManager.GetLocalIPAddress()}:42000/registrar");
 
         var regParams = new Schema.Registry.Registrar.RegParams
         {
@@ -54,9 +107,7 @@ public class ServiceRegistryTests
             RegName = "Hello Service"
         };
 
-
-        var (unreg, sturdyref) = await registrar.Register(regParams);
-
+        var (unregisterCapability, _) = await registrar.Register(regParams);
 
         var entries = await registry.Entries("Test");
 
@@ -64,14 +115,20 @@ public class ServiceRegistryTests
         foreach (var entry in entries)
         {
             Console.WriteLine(entry.Name);
-            var info = await entry.Ref.Info();
-            Console.WriteLine(info.Description);
+            if (entry.Ref is not Proxy p) continue;
+            Console.WriteLine("Is Proxy");
+            var returnedTestService = p.Cast<IA>(false);
+            // var info = await returnedTestService.Info();    
+            // Console.WriteLine($"Returned service info: {info.Id} {info.Name} {info.Description}");
+            var result = await returnedTestService.Method("Universe");
+            Console.WriteLine("Returned service method returned: " + result);
         }
 
-        var unregisterResult = await unreg.Unregister();
+        var unregisterResult = await unregisterCapability.Unregister();
+
 
         Console.WriteLine("After Unregister");
-        Console.WriteLine(unregisterResult);
+        Console.WriteLine($"Unregister result: {unregisterResult}");
 
         entries = await registry.Entries("Test");
         foreach (var entry in entries) Console.WriteLine(entry.Name);
