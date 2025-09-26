@@ -90,15 +90,15 @@ catch (Exception e)
 
 Console.WriteLine("Started ServiceRegistry with these Categories:");
 foreach (var cat in registry.Categories) Console.WriteLine(cat.Id);
-var registrySturdyRef = restorer.SaveStr(BareProxy.FromImpl(registry)).Item1;
+var registrySturdyRef = restorer.SaveStr(BareProxy.FromImpl(registry), "registry").Item1;
 Console.WriteLine($"registry_sr: {registrySturdyRef}");
 
 var registrar = new Registrar(registry, restorer);
-var regSturdyRef = restorer.SaveStr(BareProxy.FromImpl(registrar)).Item1;
+var regSturdyRef = restorer.SaveStr(BareProxy.FromImpl(registrar), "registrar").Item1;
 Console.WriteLine($"registrar_sr: {regSturdyRef}");
 
 var registryAdmin = new Admin(registry);
-var registryAdminSturdyRef = restorer.SaveStr(BareProxy.FromImpl(registryAdmin)).Item1;
+var registryAdminSturdyRef = restorer.SaveStr(BareProxy.FromImpl(registryAdmin), "registry_admin").Item1;
 Console.WriteLine($"registry_admin_sr: {registryAdminSturdyRef}");
 
 var serviceAdmin = new Mas.Infrastructure.Common.Service.Admin(registry, info =>
